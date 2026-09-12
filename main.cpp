@@ -10,6 +10,9 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#ifdef small
+#undef small
+#endif
 #include "core.hpp"
 
 namespace fs = std::filesystem;
@@ -371,13 +374,13 @@ public:
         }
     }
 
-    static bool ready(const Snapshot& s) {
+    static bool isReady(const Snapshot& s) {
         return s.text.find("Ask Codex to do anything") != std::string::npos;
     }
 
     void ready(int seconds) {
         wait(seconds, "Codex startup", [](const Snapshot& s) {
-            return ready(s) && Clock::now() - s.changed >= 750ms;
+            return Session::isReady(s) && Clock::now() - s.changed >= 750ms;
         });
     }
 
@@ -404,7 +407,7 @@ public:
         auto sent = Clock::now();
         send("\r");
         auto result = wait(seconds, "Status capture", [&](const Snapshot& s) {
-            return s.revision > revision && ready(s) &&
+            return s.revision > revision && Session::isReady(s) &&
                 s.text.find("show current session configuration and token usage") == std::string::npos &&
                 Clock::now() - sent >= 1s && Clock::now() - s.changed >= 750ms &&
                 !lastCard(s.text).empty();
@@ -430,7 +433,7 @@ public:
                 line = trim(line);
                 if (line == "OK" || line == "• OK" || line == "● OK") ok = true;
             }
-            return s.revision > revision && ready(s) && ok &&
+            return s.revision > revision && Session::isReady(s) && ok &&
                 folded.find("esc to interrupt") == std::string::npos &&
                 Clock::now() - sent >= 2s && Clock::now() - s.changed >= 1s;
         });
